@@ -10,5 +10,4 @@ then
   echo "module ${module_name} has been unloded."
 fi
 
-insmod ${module_name}.ko
-echo "module ${module_name} has been loaded."
+insmod ${module_name}.ko && echo "module ${module_name} has been loaded."

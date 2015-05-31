@@ -6,3 +6,7 @@
 *.symvers
 .tmp_versions
 *.mod.c
+*.config
+*.creator
+*.files
+*.includes
