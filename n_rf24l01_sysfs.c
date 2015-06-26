@@ -71,11 +71,11 @@ int n_rf24l01_sysfs_init( void )
   module_kobj = kobject_create_and_add( MODULE_NAME, kernel_kobj );
   if( !module_kobj )
   {
-	printk( KERN_INFO "error while kobject_create_and_add call.\n" );
+	DEBUG_OUT( "error while kobject_create_and_add call.\n" );
 	return -ENOMEM;
   }
 
-  printk( KERN_INFO "kobject: %p has been created.\n", module_kobj );
+  DEBUG_OUT( "kobject: %p has been created.\n", module_kobj );
 
   // create the files associated with this kobject
   // after this we can see files, with names specified by attribs name,
@@ -84,12 +84,12 @@ int n_rf24l01_sysfs_init( void )
   if( ret )
   {
 	kobject_put( module_kobj );
-	printk( KERN_INFO "error while sysfs_create_group call.\n" );
+	DEBUG_OUT( "error while sysfs_create_group call.\n" );
 
 	return ret;
   }
 
-  printk( KERN_INFO "group of sysfs's attribuites has been created.\n" );
+  DEBUG_OUT( "group of sysfs's attribuites has been created.\n" );
 
   return ret;
 }
@@ -99,8 +99,8 @@ int n_rf24l01_sysfs_init( void )
 void n_rf24l01_sysfs_deinit( void )
 {
   sysfs_remove_group( module_kobj, &attr_group );
-  printk( KERN_INFO "group of sysfs's attribuites has been removed.\n" );
+  DEBUG_OUT( KERN_INFO "group of sysfs's attribuites has been removed.\n" );
 
-  printk( KERN_INFO "kobject: %p has been removed.\n", module_kobj );
+  DEBUG_OUT( "kobject: %p has been removed.\n", module_kobj );
   kobject_put( module_kobj );
 }
