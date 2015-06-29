@@ -10,3 +10,6 @@
 *.creator
 *.files
 *.includes
+.cproject
+.project
+.settings/*
