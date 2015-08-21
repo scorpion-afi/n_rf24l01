@@ -13,6 +13,7 @@
 // commands set
 #define R_REGISTER 		0x00
 #define W_REGISTER 		0x20
+#define R_RX_PAYLOAD    0x61
 #define W_TX_PAYLOAD	0xa0
 #define NOP 			0xff
 

@@ -22,11 +22,26 @@ int main ( void )
 	char str[] = "hello world!!!";
 	char* byte;
 	__u8 reg;
+	__u64 data;
 
 	byte = str;
 
 	ret = init_n_rf24l01();
 	if( ret < 0 ) return 1;
+
+	write_register( EN_AA_RG, 0x00 );
+
+	prepare_to_receive();
+
+	while(1)
+	{
+		read_register( STATUS_RG, &reg );
+		if( reg != 0x0e )
+		{
+			send_command( R_RX_PAYLOAD, NULL, &data, 1, 0);
+			clear_pending_interrupts();
+		}
+	}
 
 	ret = prepare_to_transmit();
 	if( ret < 0 ) return 1;
