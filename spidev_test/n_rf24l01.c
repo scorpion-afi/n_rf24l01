@@ -416,6 +416,27 @@ int clear_pending_interrupts( void )
 	return 0;
 }
 
+// wait for pakage transmitting (TX_DS bit in STATUS register)
+//======================================================================================================
+void wait_pkg_transmitted( void )
+{
+  __u8 reg;
+
+  while( 1 )
+  {
+    usleep( 1 );
+
+    read_register( STATUS_RG, &reg );
+
+    // clear TX FIFO pending interrupt flag
+    if( reg & TX_DS )
+    {
+      set_bits( STATUS_RG, TX_DS );
+      break;
+    }
+  }
+}
+
 // setup odroid's pins needed to control n_rf24l01
 // to explain watch to http://forum.odroid.com/viewtopic.php?f=80&t=5702
 // return -1 if failed
@@ -589,12 +610,16 @@ int init_n_rf24l01( void )
 
 	printf( "pins were successfully prepared to use.\n" );
 
+	set_up_ce_pin( 1 );
+
+    write_register( EN_AA_RG, 0x00 );
+
 	// turn on n_rf24l01 transceiver
 	ret = set_bits( CONFIG_RG, PWR_UP);
 	if( ret < 0 ) return -1;
 	usleep( 1500 );
 
-	// set data field size to 1 byte (we will transmit 1 byte for time)
+	// set data field size to 32 bytes (we will transmit 32 bytes for time)
 	write_register( RX_PW_P0_RG, 0x01 );
 
 	// set the lowermost transmit power

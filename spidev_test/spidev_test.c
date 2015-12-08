@@ -19,17 +19,52 @@
 int main ( void )
 {
 	int ret;
-	char str[] = "hello world!!!";
+	char str[] = "Lena I want to make your life more happy.";
 	char* byte;
 	__u8 reg;
-	__u64 data;
+	__u64 data = 0;
 
 	byte = str;
 
 	ret = init_n_rf24l01();
 	if( ret < 0 ) return 1;
 
-	write_register( EN_AA_RG, 0x00 );
+	prepare_to_transmit();
+
+    while( 1 )
+    {
+      printf( "transmit %c.\n", *byte );
+
+      data = (__u64)*byte;
+      send_command( W_TX_PAYLOAD, NULL, &data, 1, 1 );
+
+      // CE up... sleep 10 us... CE down - to actual data transmit (in space)
+      set_up_ce_pin( 1 );
+      usleep( 10 );
+      set_up_ce_pin( 0 );
+
+      // round-robin buffer
+      if( *(++byte) == 0 )
+      {
+        byte = str;
+      }
+
+      wait_pkg_transmitted();
+
+      sleep( 1 );
+    }
+
+	read_register( CONFIG_RG, &reg );
+	read_register( STATUS_RG, &reg );
+
+	send_command( W_TX_PAYLOAD, NULL, (__u64*)"9", 1, 1 );
+
+
+
+	read_register( STATUS_RG, &reg );
+	clear_pending_interrupts();
+	read_register( STATUS_RG, &reg );
+
 
 	prepare_to_receive();
 
@@ -38,7 +73,7 @@ int main ( void )
 		read_register( STATUS_RG, &reg );
 		if( reg != 0x0e )
 		{
-			send_command( R_RX_PAYLOAD, NULL, &data, 1, 0);
+			send_command( R_RX_PAYLOAD, NULL, &data, 1, 0 );
 			clear_pending_interrupts();
 		}
 	}

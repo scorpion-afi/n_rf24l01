@@ -37,6 +37,9 @@
 #define PRIM_RX	0x01
 #define PWR_UP 	0x02
 
+//  STATUS register
+#define TX_DS   0x20
+
 // each register has 5 bits address in registers map
 // used for R_REGISTER and W_REGISTER commands
 #define REG_ADDR_BITS 0x1f
