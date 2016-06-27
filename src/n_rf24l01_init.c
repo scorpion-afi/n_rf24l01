@@ -1,23 +1,33 @@
 #include <linux/fs.h>        // for file, node structure declaration
 #include <linux/cdev.h>      // character device API
-#include <linux/spi/spi.h>
+
 #include <asm-generic/uaccess.h> // for access user's address space
 #include <linux/wait.h>		// to be able to sleep and awake process
 #include <linux/sched.h>
 
+#include <linux/spi/spi.h>
+
 #define _DEBUG_
 #include "n_rf24l01.h"
 
-// create device file itself, for device number watch to /proc/devices/&{MODULE_NAME}
+// create device file itself, for device number watch to /proc/devices &{MODULE_NAME}
 
 static dev_t n_rf24l01_dev;
 static struct cdev* n_rf24l01_cdev;
 static n_rf24l01_device_t n_rf24l01_device;
 
+static struct spi_device* spi_dev = NULL;
+
 // called when somebody makes systemcall 'open' on device file
 //=======================================================================
 int n_rf24l01_open( struct inode* inod, struct file* filp )
 {
+  char cmd = 0xff; /* NOP command */
+  ssize_t res;
+
+  res = spi_w8r8( spi_dev, cmd );
+  DEBUG_OUT( "status register: %u.\n", res );
+
   DEBUG_OUT( "system call on device file.\n" );
 
   return 0;
@@ -262,6 +272,47 @@ static struct file_operations n_rf24l01_fops =
   .write = n_rf24l01_write
 };
 
+static int n_rf24l01_probe( struct spi_device* spi )
+{
+    int ret;
+
+    DEBUG_OUT( "ok.\n" );
+
+    DEBUG_OUT( "spi_driver->probe: max_speed_hz: %u, chip_select: %hhu, mode: %hhu,"
+        "bits_per_word: %hhu, irq: %d, modalias: %s, cs_gpio: %d.\n",
+        spi->max_speed_hz, spi->chip_select, spi->mode, spi->bits_per_word, spi->irq,
+        spi->modalias, spi->cs_gpio);
+
+    spi->bits_per_word = 8;
+    spi->mode = SPI_MODE_0;
+    spi->max_speed_hz = 500000;
+
+    ret = spi_setup( spi );
+    if( ret < 0 )
+        return ret;
+
+    spi_dev = spi;
+
+    return 0;
+}
+
+static int n_rf24l01_remove( struct spi_device* spi )
+{
+    return 0;
+}
+
+static struct spi_driver n_rf24l01_driver =
+{
+    .driver =
+    {
+        .name   = MODULE_NAME,
+        .owner  = THIS_MODULE,
+    },
+
+    .probe  = n_rf24l01_probe,
+    .remove = n_rf24l01_remove
+};
+
 // called when kernel loaded module
 //=======================================================================
 static int n_rf24l01_init( void )
@@ -272,7 +323,7 @@ static int n_rf24l01_init( void )
 
   n_rf24l01_sysfs_init();
 
-  // ask kernel allocate us one device number (x.0)
+  // ask kernel to allocate us one device number (x.0)
   // device number ties device file with device functions set
   // after success call, /proc/devices/${MODULE_NAME} node will appear
   ret = alloc_chrdev_region( &n_rf24l01_dev, 0, 1, MODULE_NAME );
@@ -307,8 +358,9 @@ static int n_rf24l01_init( void )
 
   init_waitqueue_head( &n_rf24l01_device.rr_buffer.write_read_queue );
 
-  /*spi_read(NULL, NULL, 1);
-  spi_register_board_info*/
+  DEBUG_OUT( "try to register spi device driver... " );
+
+  spi_register_driver( &n_rf24l01_driver );
 
   return 0;
 }
@@ -317,6 +369,8 @@ static int n_rf24l01_init( void )
 //=======================================================================
 static void n_rf24l01_exit( void )
 {
+  spi_unregister_driver( &n_rf24l01_driver );
+
   // unregister character device
   cdev_del( n_rf24l01_cdev );
 
@@ -332,4 +386,4 @@ module_init( n_rf24l01_init );
 module_exit( n_rf24l01_exit );
 
 MODULE_LICENSE( "GPL" );
-MODULE_AUTHOR( "Ila <ivan0ivanov0@mail.ru>" );
+MODULE_AUTHOR( "sergs <ivan0ivanov0@mail.ru>" );

@@ -6,10 +6,10 @@ lsmod | grep ${module_name} > /dev/null
 
 if [ $? == 0 ]
 then
-  rmmod ${module_name} && echo "module ${module_name} has been unloded." || exit 1
+  modprobe -r ${module_name} && echo "module ${module_name} has been unloded." || exit 1
 fi
 
-insmod ${module_name}.ko
+modprobe ${module_name}
 
 if [ $? == 0 ]
 then
@@ -18,7 +18,9 @@ then
   rm -f /dev/${module_name}
   mknod -m 606 /dev/${module_name} c 248 0 
   
-  echo "device file /dev/${module_name} has been created." 
+  echo "device file /dev/${module_name} has been created."
+else
+  echo "error during modprobe ${module_name}."
 fi
 
 
