@@ -7,12 +7,15 @@
 
 #include <linux/spi/spi.h>
 
+#include <linux/gpio.h>                 // Required for the GPIO functions
+#include <linux/interrupt.h>            // Required for the IRQ code
+
 #define _DEBUG_
 #include "n_rf24l01.h"
 
 // create device file itself, for device number watch to /proc/devices &{MODULE_NAME}
 
-static dev_t n_rf24l01_dev;
+/*static dev_t n_rf24l01_dev;
 static struct cdev* n_rf24l01_cdev;
 static n_rf24l01_device_t n_rf24l01_device;
 
@@ -23,7 +26,7 @@ static struct spi_device* spi_dev = NULL;
 int n_rf24l01_open( struct inode* inod, struct file* filp )
 {
   char cmd = 0xff; /* NOP command */
-  ssize_t res;
+/*  ssize_t res;
 
   res = spi_w8r8( spi_dev, cmd );
   DEBUG_OUT( "status register: %u.\n", res );
@@ -312,15 +315,58 @@ static struct spi_driver n_rf24l01_driver =
     .probe  = n_rf24l01_probe,
     .remove = n_rf24l01_remove
 };
+*/
+
+#define IRQ_LINE_GPIO_MY 200
+static int irq_line;
+
+/** @brief The GPIO IRQ Handler function
+ *  This function is a custom interrupt handler that is attached to the GPIO above. The same interrupt
+ *  handler cannot be invoked concurrently as the interrupt line is masked out until the function is complete.
+ *  This function is static as it should not be invoked directly from outside of this file.
+ *  @param irq    the IRQ number that is associated with the GPIO -- useful for logging.
+ *  @param dev_id the *dev_id that is provided -- can be used to identify which device caused the interrupt
+ *  Not used in this example as NULL is passed.
+ *  @param regs   h/w specific register values -- only really ever used for debugging.
+ *  return returns IRQ_HANDLED if successful -- should return IRQ_NONE otherwise.
+ */
+static irqreturn_t my_first_linux_irs(unsigned int irq, void *dev_id, struct pt_regs *regs)
+{
+   DEBUG_OUT( "interrupt has been occurred: %d pin state: %d.\n", IRQ_LINE_GPIO_MY, gpio_get_value( IRQ_LINE_GPIO_MY ) );
+
+   return (irqreturn_t) IRQ_HANDLED;      // Announce that the IRQ has been handled correctly
+}
 
 // called when kernel loaded module
 //=======================================================================
 static int n_rf24l01_init( void )
 {
-  int ret;
+  int res;
 
   DEBUG_OUT( "module %s has been loaded.\n", MODULE_NAME );
 
+  if( !gpio_is_valid( IRQ_LINE_GPIO_MY ) )
+  {
+      DEBUG_OUT( "invalid LED GPIO.\n");
+      return -ENODEV;
+  }
+
+  gpio_request( IRQ_LINE_GPIO_MY, "sysfs" );
+  gpio_direction_input( IRQ_LINE_GPIO_MY );
+  gpio_set_debounce( IRQ_LINE_GPIO_MY, 200 );
+  gpio_export( IRQ_LINE_GPIO_MY, 0);
+
+  DEBUG_OUT( "gpio IRQ_LINE_GPIO_MY: %d.\n", gpio_get_value( IRQ_LINE_GPIO_MY ) );
+
+  irq_line = gpio_to_irq( IRQ_LINE_GPIO_MY );
+  DEBUG_OUT( "%d pin was mapped to %d IRQ line.\n", IRQ_LINE_GPIO_MY, irq_line );
+
+  res = request_irq( irq_line, (irq_handler_t) my_first_linux_irs, IRQF_TRIGGER_RISING,
+      "my_first_linux_irs", NULL );
+  DEBUG_OUT( "interrupt request result (for irq_line %d): %d.\n", irq_line, res );
+
+  return res;
+/*
   n_rf24l01_sysfs_init();
 
   // ask kernel to allocate us one device number (x.0)
@@ -360,7 +406,7 @@ static int n_rf24l01_init( void )
 
   DEBUG_OUT( "try to register spi device driver... " );
 
-  spi_register_driver( &n_rf24l01_driver );
+  spi_register_driver( &n_rf24l01_driver );*/
 
   return 0;
 }
@@ -369,7 +415,7 @@ static int n_rf24l01_init( void )
 //=======================================================================
 static void n_rf24l01_exit( void )
 {
-  spi_unregister_driver( &n_rf24l01_driver );
+  /*spi_unregister_driver( &n_rf24l01_driver );
 
   // unregister character device
   cdev_del( n_rf24l01_cdev );
@@ -378,6 +424,11 @@ static void n_rf24l01_exit( void )
   unregister_chrdev_region( n_rf24l01_dev, 1 );
 
   n_rf24l01_sysfs_deinit();
+*/
+
+  free_irq( irq_line, NULL );               // Free the IRQ number, no *dev_id required in this case
+  gpio_unexport( IRQ_LINE_GPIO_MY );               // Unexport the Button GPIO
+  gpio_free( IRQ_LINE_GPIO_MY );                   // Free the Button GPIO
 
   DEBUG_OUT( "module %s has been unloaded.\n", MODULE_NAME );
 }

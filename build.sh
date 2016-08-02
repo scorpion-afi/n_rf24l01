@@ -1,6 +1,8 @@
 #!/bin/bash
 
+rm -f n_rf24l01.ko
+
 rm -rf temp; mkdir -p temp
-cp src/Makefile src/Kbuild src/n_rf24l01_init.c src/n_rf24l01_sysfs.c src/n_rf24l01.h temp/
+cp src/* temp/
 
 cd temp && make && cp n_rf24l01.ko ../ && cd ../ && rm -rf temp
