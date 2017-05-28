@@ -1,5 +1,5 @@
-Here are n_rf24l01 transceiver's linux kernel driver sources.
-
+Nodule - ground.
+CE(n_rf24l01) - J4(IO-Port#1), 1-st pin
 
 To figure out how to connect n_rf24l01 board to odroid look at:
  - http://odroid.com/dokuwiki/doku.php?id=en:u3_ioport_spi

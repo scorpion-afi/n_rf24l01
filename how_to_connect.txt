@@ -1,2 +1,0 @@
-Nodule - ground.
-CE(n_rf24l01) - J4(IO-Port#1), 1-st pin
