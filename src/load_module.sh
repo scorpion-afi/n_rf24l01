@@ -1,6 +1,11 @@
 #!/bin/bash
 
-# this script must be executed with root priveleges
+# this script must be executed on the target with root priveleges
+# this script (re)load the kernel module and create the device file to
+# comunicate with this loaded module.
+
+# TODO: this value has to be got from kernel log, after module has been loaded
+dev_maj_number=248
 
 module_name=n_rf24l01
 
@@ -9,11 +14,16 @@ lsmod | grep ${module_name} > /dev/null
 
 if [ $? == 0 ]
 then
-  modprobe -r ${module_name} && echo "module ${module_name} has been unloded." || exit 1
+  modprobe -r ${module_name}
+  
+  if [ $? == 0 ]; then
+    echo "module ${module_name} has been unloded."
+  else
+    echo "fail to remove module."; exit 1
+  fi
 fi
 
-# load aux spi master driver and our driver
-modprobe spi-s3c64xx
+# load linux kernel module
 modprobe ${module_name}
 
 # create device file to comunicate from user space
@@ -22,9 +32,9 @@ then
   echo "module ${module_name} has been loaded."
   
   rm -f /dev/${module_name}
-  mknod -m 606 /dev/${module_name} c 248 0 
+  mknod -m 606 /dev/${module_name} c ${dev_maj_number} 0 
   
   echo "device file /dev/${module_name} has been created."
 else
-  echo "error during modprobe ${module_name}."
+  echo "fail to load module ${module_name}."
 fi
